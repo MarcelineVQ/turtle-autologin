@@ -76,7 +76,7 @@
 		</Anchors>
 		<Layers>
 			<Layer level="BACKGROUND">
-					<FontString text="Select account" inherits="GlueFontDisableLarge">
+					<FontString name="AutologinSelectAccountText" inherits="GlueFontDisableLarge">
 						<Size>
 							<AbsDimension x="256" y="13"/>
 						</Size>
@@ -145,7 +145,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="AutologinRemoveAccountButton" inherits="GlueButtonSmallTemplate" text="Remove account">
+			<Button name="AutologinRemoveAccountButton" inherits="GlueButtonSmallTemplate">
 				<Anchors>
 					<Anchor point="BOTTOM" relativeTo="AutologinAccountsFrame" relativePoint="BOTTOM">
 						<Offset>

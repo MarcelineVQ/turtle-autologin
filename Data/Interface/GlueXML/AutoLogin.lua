@@ -3,6 +3,28 @@
 --------
 
 local _G = _G or getfenv(0)
+local L = {}
+
+L["enUS"] = {
+    ["SelectAccount"] = "Select account",
+    ["RemoveAccount"] = "Remove account",
+    ["LockAccounts"] = "Lock Accounts",
+    ["LockCharacters"] = "Lock Characters",
+    ["NoSuperWoW"] = "|cff77ff00Turtle AutoLogin|r requires SuperWoW 1.4 or newer to operate.",
+}
+
+L["ruRU"] = {
+    ["SelectAccount"] = "Выберите аккаунт",
+    ["RemoveAccount"] = "Удалить аккаунт",
+    ["LockAccounts"] = "Заблокировать аккаунты",
+    ["LockCharacters"] = "Заблокировать персонажей",
+    ["NoSuperWoW"] = "|cff77ff00Turtle AutoLogin|r требует SuperWoW 1.4 или новее для работы.",
+}
+
+local function GetLocalizedText(key)
+    local locale = GetLocale() or "enUS"
+    return (L[locale] and L[locale][key]) or L["enUS"][key]
+end
 
 LoginManager = {}
 LoginManager.State = {}
@@ -20,7 +42,7 @@ end
 
 if not has_superwow then
   GlueDialogTypes["AL_NO_SWOW"] = {
-    text = "|cff77ff00Turtle AutoLogin|r requires SuperWoW 1.4 or newer to operate.",
+    text = GetLocalizedText("NoSuperWoW"),
     button1 = TEXT(OKAY),
     showAlert = 1,
   }
@@ -198,10 +220,13 @@ function LoginManager:MakeExtraAccountButtons()
   if not quitButton.lock then
     -- Create the Lock button
     local lockButton = CreateFrame("Button", "ButtonAccountButtonsLock", quitButton, "GlueButtonSmallTemplate")
-    lockButton:SetWidth(150)
+    local buttonText = GetLocalizedText("LockAccounts") -- Dynamic width depending on the text
+    lockButton:SetText(buttonText)
+    local textWidth = lockButton:GetFontString():GetStringWidth()
+    lockButton:SetWidth(textWidth + 50) -- Add indents to the edges
     lockButton:SetHeight(35)
     lockButton:SetPoint("RIGHT", quitButton, "LEFT", 4, 0)
-    lockButton:SetText("Lock Accounts")
+    lockButton:SetText(GetLocalizedText("LockAccounts"))
   
     lockButton:SetScript("OnClick", function()
       LoginManager.State.account_buttons_locked = not LoginManager.State.account_buttons_locked
@@ -316,6 +341,9 @@ function LoginManager:UpdateLoginUI()
   local total = table.getn(self.State.accounts)
   local pageIndices = {}
   local skip = self.CurrentPage * self.PageSize;
+
+  AutologinSelectAccountText:SetText(GetLocalizedText("SelectAccount"))
+  AutologinRemoveAccountButton:SetText(GetLocalizedText("RemoveAccount"))
 
   for i = 1, self.PageSize do
     local button = _G["AutologinAccountButton" .. i]
@@ -519,11 +547,14 @@ function LoginManager:OnCharactersLoad()
   if not addonsButton.lock then
     -- Create the Lock button
     local lockButton = CreateFrame("Button", "ButtonCharButtonsLock", addonsButton, "GlueButtonSmallTemplate")
-    lockButton:SetWidth(150)
+    local buttonText = GetLocalizedText("LockCharacters") -- Dynamic width depending on the text
+    lockButton:SetText(buttonText)
+    local textWidth = lockButton:GetFontString():GetStringWidth()
+    lockButton:SetWidth(textWidth + 50) -- Add indents to the edges
     lockButton:SetHeight(35)
     lockButton:SetPoint("LEFT", addonsButton, "RIGHT", 4, 0)
-    lockButton:SetText("Lock Characters")
-  
+    lockButton:SetText(GetLocalizedText("LockCharacters"))
+
     lockButton:SetScript("OnClick", function()
       LoginManager.char_buttons_locked = not LoginManager.char_buttons_locked
       this:Show()
