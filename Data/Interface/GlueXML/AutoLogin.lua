@@ -28,6 +28,18 @@ if not has_superwow then
   GlueDialog_Show("AL_NO_SWOW")
   return
 end
+
+local CLASS_COLORS = {
+  ["WARRIOR"] = { r = 0.78, g = 0.61, b = 0.43, colorStr = "ffC69B6D" },
+  ["PALADIN"] = { r = 0.96, g = 0.55, b = 0.73, colorStr = "ffF48CBA" },
+  ["HUNTER"] = { r = 0.67, g = 0.83, b = 0.45, colorStr = "ffAAD372" },
+  ["ROGUE"] = { r = 1.00, g = 0.96, b = 0.41, colorStr = "ffFFF468" },
+  ["PRIEST"] = { r = 1.00, g = 1.00, b = 1.00, colorStr = "ffFFFFFF" },
+  ["SHAMAN"] = { r = 0.00, g = 0.44, b = 0.87, colorStr = "ff0070DD" },
+  ["MAGE"]    = { r = 0.25, g = 0.78, b = 0.92, colorStr = "ff3FC7EB" }, 
+  ["WARLOCK"] = { r = 0.53, g = 0.53, b = 0.93, colorStr = "ff8788EE" },
+  ["DRUID"] = { r = 1.00, g = 0.49, b = 0.04, colorStr = "ffFF7C0A" },
+}
 --------
 
 -------
@@ -380,8 +392,9 @@ function LoginManager:UpdateCharacterUI()
         zone = ""  
       end
       _G["CharSelectCharacterButton"..index.."ButtonTextName"]:SetText(char.name)  
-      _G["CharSelectCharacterButton"..index.."ButtonTextInfo"]:SetText(
-          format(TEXT(char.ghost and CHARACTER_SELECT_INFO_GHOST or CHARACTER_SELECT_INFO), char.level, char.class))  
+    local classColor = CLASS_COLORS[string.upper(char.class)] or "|cffFFFFFF"
+	    _G["CharSelectCharacterButton"..index.."ButtonTextInfo"]:SetText(
+    format(TEXT(char.ghost and CHARACTER_SELECT_INFO_GHOST or CHARACTER_SELECT_INFO), char.level, "|c" .. classColor.colorStr .. char.class .. "|r")) 
       _G["CharSelectCharacterButton"..index.."ButtonTextLocation"]:SetText(zone)  
     end
     
