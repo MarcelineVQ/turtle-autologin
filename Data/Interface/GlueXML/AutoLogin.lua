@@ -393,7 +393,7 @@ function LoginManager:UpdateCharacterUI()
       end
       _G["CharSelectCharacterButton"..index.."ButtonTextName"]:SetText(char.name)  
     local classColor = CLASS_COLORS[string.upper(char.class)] or "|cffFFFFFF"
-	    _G["CharSelectCharacterButton"..index.."ButtonTextInfo"]:SetText(
+      _G["CharSelectCharacterButton"..index.."ButtonTextInfo"]:SetText(
     format(TEXT(char.ghost and CHARACTER_SELECT_INFO_GHOST or CHARACTER_SELECT_INFO), char.level, "|c" .. classColor.colorStr .. char.class .. "|r")) 
       _G["CharSelectCharacterButton"..index.."ButtonTextLocation"]:SetText(zone)  
     end
