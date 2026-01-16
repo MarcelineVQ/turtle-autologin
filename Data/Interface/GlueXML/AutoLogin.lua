@@ -750,9 +750,13 @@ function LoginManager:OnCharactersLoad()
           return ra < rb
         end)
 
-        CharacterSelect_SelectCharacter(saved_chars.last or 1)
-        if self.auto_char_button_pressed then
-          EnterWorld()
+        local numChars = GetNumCharacters()
+        if numChars > 0 then
+            CharacterSelect_SelectCharacter(math.min(saved_chars.last or 1, numChars))
+            if self.auto_char_button_pressed then
+                self.auto_char_button_pressed = false
+                EnterWorld()
+            end
         end
 
         break
@@ -917,3 +921,4 @@ CharacterSelect_EnterWorld = function (a1,a2,a3,a4,a5,a6,a7,a8,a9)
   LoginManager:EnterWorld()
 end
 --------
+
