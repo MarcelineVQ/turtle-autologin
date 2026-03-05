@@ -5,6 +5,7 @@
 -- toto, make cancelling a login clear LoginManager.auto_char_button_pressed = true
 
 local _G = _G or getfenv(0)
+local PASSWORD_MASK = "***************"
 
 local L = {}
 
@@ -24,10 +25,11 @@ L["enUS"] = {
   -- localize the Right value
   ["SelectAccount"] = "Select account",
   ["RemoveAccount"] = "Remove account",
-  ["LockAccounts"] = "Lock Accounts",
-  ["StreamerMode"] = "Streamer Mode",
+  ["LockAccounts"] = "Lock",
+  ["StreamerMode"] = "Streamer",
+  ["EncryptMode"] = "Encrypt",
   ["LockCharacters"] = "Lock Characters",
-  ["NoSuperWoW"] = "|cff77ff00Turtle AutoLogin|r requires SuperWoW 1.4 or newer to operate.",
+  ["NoDeps"] = "|cff77ff00Turtle AutoLogin|r requires Nampower 3.2.0+ or SuperWoW 1.4+ to operate.",
 }
 
 L["ruRU"] = {
@@ -46,26 +48,44 @@ L["ruRU"] = {
   -- localize the Right value
   ["SelectAccount"] = "Выберите аккаунт",
   ["RemoveAccount"] = "Удалить аккаунт",
-  ["LockAccounts"] = "Заблокировать аккаунты",
-  ["StreamerMode"] = "Режим стримера",
+  ["LockAccounts"] = "Блок.",
+  ["StreamerMode"] = "Стример",
+  ["EncryptMode"] = "Шифр.",
   ["LockCharacters"] = "Заблокировать персонажей",
-  ["NoSuperWoW"] = "|cff77ff00Turtle AutoLogin|r требует SuperWoW 1.4 или новее для работы.",
+  ["NoDeps"] = "|cff77ff00Turtle AutoLogin|r требует Nampower 3.2.0+ или SuperWoW 1.4+ для работы.",
 }
 
 L = L[GetLocale()] or L["enUS"]
 
+local has_nampower = EncryptPassword and EncryptedServerLogin
 local has_superwow = (ImportFile and ExportFile) or (SUPERWOW_VERSION and tonumber(SUPERWOW_VERSION) >= 1.4)
+local has_encryption = false
+local encryption_missing_key = false
+if has_nampower then
+  local ok, err = pcall(EncryptPassword, "test")
+  if ok then
+    has_encryption = true
+  elseif string.find(err or "", "WOW_ENCRYPTION_KEY is not set") then
+    encryption_missing_key = true
+  end
+end
 
-if not has_superwow then
-  GlueDialogTypes["AL_NO_SWOW"] = {
-    text = L["NoSuperWoW"],
+if not has_nampower and not has_superwow then
+  GlueDialogTypes["AL_NO_DEPS"] = {
+    text = L["NoDeps"],
     button1 = TEXT(OKAY),
     showAlert = 1,
   }
 
-  GlueDialog_Show("AL_NO_SWOW")
+  GlueDialog_Show("AL_NO_DEPS")
   return
 end
+
+GlueDialogTypes["AL_CANT_DECRYPT"] = {
+  text = "This account's password is encrypted but decryption is not available.\nPlease re-enter your password to save it again.",
+  button1 = TEXT(OKAY),
+  showAlert = 1,
+}
 
 local CLASS_COLORS = {
   ["Druid"] = { r = 1.00, g = 0.49, b = 0.04, colorStr = "ffFF7C0A" },
@@ -86,6 +106,7 @@ LoginManager.CurrentPage = 0
 LoginManager.PageSize = 9
 LoginManager.LimitReached = false
 LoginManager.from_login_screen = false
+LoginManager.has_nampower = has_nampower
 LoginManager.has_superwow = has_superwow
 
 --------
@@ -270,12 +291,41 @@ function LoginManager:MakeExtraAccountButtons()
   end
 
   local quitButton = _G["AccountLoginExitButton"]
+  if has_nampower and not quitButton.encrypt then
+    local encryptButton = CreateFrame("Button", "ButtonAccountButtonsEncrypt", quitButton, "GlueButtonSmallTemplate")
+    encryptButton:SetWidth(150)
+    encryptButton:SetHeight(35)
+    encryptButton:SetPoint("RIGHT", quitButton, "LEFT", 4, 0)
+
+    encryptButton:SetText(L["EncryptMode"])
+    encryptButton:SetWidth(encryptButton:GetFontString():GetStringWidth() + 50)
+
+    encryptButton:SetScript("OnClick", function()
+      if encryption_missing_key then return end
+      LoginManager.State.encrypt_passwords = not LoginManager.State.encrypt_passwords
+      this:Show()
+      LoginManager:SaveAccounts()
+      LoginManager:UpdateUI()
+    end)
+    if encryption_missing_key then
+      encryptButton:SetScript("OnEnter", function()
+        GlueTooltip_SetOwner(nil, encryptButton, 0, 0)
+        GlueTooltip:ClearAllPoints()
+        GlueTooltip:SetPoint("BOTTOM", encryptButton, "TOP", 0, 4)
+        GlueTooltip_SetText("Set environment variable\n|cffffd100WOW_ENCRYPTION_KEY|r to enable.", nil, 1, 1, 1)
+      end)
+      encryptButton:SetScript("OnLeave", function()
+        GlueTooltip:Hide()
+      end)
+    end
+    quitButton.encrypt = encryptButton
+  end
+
   if not quitButton.lock then
-    -- Create the Lock button
     local lockButton = CreateFrame("Button", "ButtonAccountButtonsLock", quitButton, "GlueButtonSmallTemplate")
     lockButton:SetWidth(150)
     lockButton:SetHeight(35)
-    lockButton:SetPoint("RIGHT", quitButton, "LEFT", 4, 0)
+    lockButton:SetPoint("RIGHT", (quitButton.encrypt or quitButton), "LEFT", 4, 0)
 
     lockButton:SetText(L["LockAccounts"])
     lockButton:SetWidth(lockButton:GetFontString():GetStringWidth() + 50)
@@ -291,7 +341,6 @@ function LoginManager:MakeExtraAccountButtons()
   end
 
   if not quitButton.streamer then
-    -- Create the Lock button
     local streamerButton = CreateFrame("Button", "ButtonAccountButtonsStreamer", quitButton, "GlueButtonSmallTemplate")
     streamerButton:SetWidth(150)
     streamerButton:SetHeight(35)
@@ -328,7 +377,7 @@ end
 
 -- Strangely when you login and cancel the program scrubs the string you used for the password from _anywhere_ it finds it.
 -- Essentially it deletes the immutable string itself. We avoid this by storing the password string in memory with a
--- leading : and clip the : at use-time. Trying other things like string.lower caused program hangs.
+-- leading prefix and clip it at use-time. : = plaintext, :encrypted: = encrypted (nampower).
 function LoginManager:LoadAccounts()
   self.State.accounts = {}
   self.State.last = nil
@@ -340,6 +389,11 @@ function LoginManager:LoadAccounts()
     if file.last then self.State.last = file.last end
     if file.account_buttons_locked then self.State.account_buttons_locked = file.account_buttons_locked end
     if file.account_buttons_streamer then self.State.account_buttons_streamer = file.account_buttons_streamer end
+    if has_encryption and file.encrypt_passwords ~= nil then
+      self.State.encrypt_passwords = file.encrypt_passwords
+    elseif has_encryption then
+      self.State.encrypt_passwords = true
+    end
     return true
   elseif login_data then -- old format
     for label,account,password,character,auto,last in string.gfind(login_data, "label:(%S*) account:(%S+) password(:%S+) character:(%S*) auto:(%S*) last:(%S*)\n") do
@@ -372,22 +426,27 @@ function LoginManager:SaveAccounts(by_login)
     local password = AccountLoginPasswordEdit:GetText()
 
     -- only try to overwrite a password when there is one to overwrite!
-    if (account and account ~= "" and password and password ~= "") then
+    if (account and account ~= "" and password and password ~= "" and password ~= PASSWORD_MASK) then
+      local stored = ":"..password
+      if self.State.encrypt_passwords then
+        local ok, encrypted = pcall(EncryptPassword, password)
+        if ok then stored = encrypted end
+      end
       local exists = false
       for i = 1, table.getn(self.State.accounts) do
         if (self.State.accounts[i].account == account) then
           exists = true
-          self.State.accounts[i].password = ":"..password
+          self.State.accounts[i].password = stored
           break
         end
       end
       if (not exists) then
-        table.insert(self.State.accounts, { account = account, password = ":"..password })
+        self.pending_account = { account = account, password = stored }
       end
     end
   end
 
-  return self:ToFile("logins",self.State)
+  return self:ToFile("logins", self.State)
 end
 
 function LoginManager:SaveLabel()
@@ -401,7 +460,11 @@ function LoginManager:SelectAccount(idx)
   local pwd = self.State.accounts[i].password
 
   AccountLoginAccountEdit:SetText(act)
-  AccountLoginPasswordEdit:SetText(string.sub(pwd,2))
+  if string.find(pwd, "^:encrypted:") then
+    AccountLoginPasswordEdit:SetText(PASSWORD_MASK)
+  else
+    AccountLoginPasswordEdit:SetText(string.sub(pwd, 2))
+  end
   LoginManager:OnNameUpdate(act)
 end
 
@@ -515,6 +578,19 @@ function LoginManager:UpdateLoginUI()
       streamerButton:SetTextColor(1,0.78,0)
     end
   end
+  local encryptButton = _G["ButtonAccountButtonsEncrypt"]
+  if encryptButton then
+    if encryption_missing_key then
+      encryptButton:GetNormalTexture():SetVertexColor(0.3,0.3,0.3)
+      encryptButton:SetTextColor(0.7,0.15,0.15)
+    elseif self.State.encrypt_passwords then
+      encryptButton:GetNormalTexture():SetVertexColor(0.5,0.5,0.5)
+      encryptButton:SetTextColor(0.5,0.5,0.5)
+    else
+      encryptButton:GetNormalTexture():SetVertexColor(1,1,1)
+      encryptButton:SetTextColor(1,0.78,0)
+    end
+  end
 
   local removeButton = _G["AutologinRemoveAccountButton"]
   if removeButton then
@@ -582,11 +658,23 @@ end
 function LoginManager:OnLogin()
   local name = AccountLoginAccountEdit:GetText()
   local password = AccountLoginPasswordEdit:GetText()
-  
+
   self.State.last = self.SelectedAcct
   self:SaveAccounts(true)
   self:OnNameUpdate(name)
   self.from_login_screen = true
+
+  if self.SelectedAcct and self.State.accounts[self.SelectedAcct] then
+    local stored = self.State.accounts[self.SelectedAcct].password
+    if string.find(stored, "^:encrypted:") then
+      if not has_encryption then
+        GlueDialog_Show("AL_CANT_DECRYPT")
+        return
+      end
+      EncryptedServerLogin(name, stored)
+      return
+    end
+  end
   DefaultServerLogin(name, password)
 end
 
@@ -622,6 +710,13 @@ end
 function LoginManager:OnCharactersLoad()
 
   self:LoadAccounts()
+
+  if self.pending_account and self.pending_account.account and self.pending_account.account ~= ""
+      and self.pending_account.password and self.pending_account.password ~= "" then
+    table.insert(self.State.accounts, self.pending_account)
+    self:SaveAccounts()
+  end
+  self.pending_account = nil
 
   -- make up/down/auto buttons
   for i=1,10 do

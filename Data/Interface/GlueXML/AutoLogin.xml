@@ -240,7 +240,7 @@
 		</Backdrop>
 		<Scripts>
 			<OnShow>
-				if not (LoginManager and LoginManager.has_superwow) then
+				if not (LoginManager and (LoginManager.has_nampower or LoginManager.has_superwow)) then
 					this:Hide()
 				end
 			</OnShow>
