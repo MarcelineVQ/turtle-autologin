@@ -10,7 +10,7 @@ local PASSWORD_MASK = "***************"
 local L = {}
 
 L["enUS"] = {
--- localize the Left value
+  -- localize the Left value
   class = {
     ["Druid"] = nil,
     ["Hunter"] = nil,
@@ -22,6 +22,7 @@ L["enUS"] = {
     ["Warrior"] = nil,
     ["Warlock"] = nil,
   },
+  -- localize the Right value
   ["Select account"] = nil,
   ["Remove account"] = nil,
   ["Lock"] = nil,
@@ -47,6 +48,7 @@ L["ruRU"] = {
     ["Воин"] = "Warrior",
     ["Чернокнижник"] = "Warlock",
   },
+  -- localize the Right value
   ["Select account"] = "Выберите аккаунт",
   ["Remove account"] = "Удалить аккаунт",
   ["Lock"] = "Блок.",
@@ -1050,4 +1052,5 @@ CharacterSelect_EnterWorld = function (a1,a2,a3,a4,a5,a6,a7,a8,a9)
   LoginManager:EnterWorld()
 end
 --------
+
 
