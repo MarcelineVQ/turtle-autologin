@@ -10,6 +10,7 @@ local PASSWORD_MASK = "***************"
 local L = {}
 
 L["enUS"] = {
+-- localize the Left value
   class = {
     ["Druid"] = nil,
     ["Hunter"] = nil,
@@ -34,6 +35,7 @@ L["enUS"] = {
 }
 
 L["ruRU"] = {
+-- localize the Left value
   class = {
     ["Друид"] = "Druid",
     ["Охотник"] = "Hunter",
