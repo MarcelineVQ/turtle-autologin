@@ -12,28 +12,31 @@ local L = {}
 L["enUS"] = {
   -- localize the Left value
   class = {
-    ["Druid"] = "Druid",
-    ["Hunter"] = "Hunter",
-    ["Mage"] = "Mage",
-    ["Paladin"] = "Paladin",
-    ["Priest"] = "Priest",
-    ["Rogue"] = "Rogue",
-    ["Shaman"] = "Shaman",
-    ["Warrior"] = "Warrior",
-    ["Warlock"] = "Warlock",
+    ["Druid"] = nil,
+    ["Hunter"] = nil,
+    ["Mage"] = nil,
+    ["Paladin"] = nil,
+    ["Priest"] = nil,
+    ["Rogue"] = nil,
+    ["Shaman"] = nil,
+    ["Warrior"] = nil,
+    ["Warlock"] = nil,
   },
   -- localize the Right value
-  ["SelectAccount"] = "Select account",
-  ["RemoveAccount"] = "Remove account",
-  ["LockAccounts"] = "Lock",
-  ["StreamerMode"] = "Streamer",
-  ["EncryptMode"] = "Encrypt",
-  ["LockCharacters"] = "Lock Characters",
-  ["NoDeps"] = "|cff77ff00Turtle AutoLogin|r requires Nampower 3.2.0+ or SuperWoW 1.4+ to operate.",
+  ["Select account"] = nil,
+  ["Remove account"] = nil,
+  ["Lock"] = nil,
+  ["Streamer"] = nil,
+  ["Encrypt"] = nil,
+  ["Lock Characters"] = nil,
+  ["|cff77ff00Turtle AutoLogin|r requires Nampower 3.2.0+ or SuperWoW 1.4+ to operate."] = nil,
+  ["This account's password is encrypted but decryption is not available.\nPlease re-enter your password to save it again."] = nil,
+  ["Set environment variable"] = nil,
+  ["to enable."] = nil,
 }
 
 L["ruRU"] = {
-  -- localize the Left value
+-- localize the Left value
   class = {
     ["Друид"] = "Druid",
     ["Охотник"] = "Hunter",
@@ -46,16 +49,49 @@ L["ruRU"] = {
     ["Чернокнижник"] = "Warlock",
   },
   -- localize the Right value
-  ["SelectAccount"] = "Выберите аккаунт",
-  ["RemoveAccount"] = "Удалить аккаунт",
-  ["LockAccounts"] = "Блок.",
-  ["StreamerMode"] = "Стример",
-  ["EncryptMode"] = "Шифр.",
-  ["LockCharacters"] = "Заблокировать персонажей",
-  ["NoDeps"] = "|cff77ff00Turtle AutoLogin|r требует Nampower 3.2.0+ или SuperWoW 1.4+ для работы.",
+  ["Select account"] = "Выберите аккаунт",
+  ["Remove account"] = "Удалить аккаунт",
+  ["Lock"] = "Блок.",
+  ["Streamer"] = "Стример",
+  ["Encrypt"] = "Шифр.",
+  ["Lock Characters"] = "Заблокировать персонажей",
+  ["|cff77ff00Turtle AutoLogin|r requires Nampower 3.2.0+ or SuperWoW 1.4+ to operate."] = "|cff77ff00Turtle AutoLogin|r требует Nampower 3.2.0+ или SuperWoW 1.4+ для работы.",
+  ["This account's password is encrypted but decryption is not available.\nPlease re-enter your password to save it again."] = "Пароль этой учетной записи зашифрован, но расшифровка недоступна.\nПожалуйста, введите пароль еще раз, чтобы сохранить его.",
+  ["Set environment variable"] = "Установите переменную окружения",
+  ["to enable."] = "чтобы включить.",
 }
 
-L = L[GetLocale()] or L["enUS"]
+for locale, data in pairs(L) do
+  if type(data) == "table" and data.class then
+    setmetatable(data.class, {
+      __index = function(tab, key)
+        return key
+      end
+    })
+  end
+end
+
+local current_locale = GetLocale()
+local locale_table = L[current_locale] or L["enUS"]
+
+setmetatable(L, {
+  __index = function(tab, key)
+    if key == "class" then
+      return locale_table.class
+    end
+    if rawget(tab, key) and type(rawget(tab, key)) == "table" then
+      return rawget(tab, key)
+    end
+    local value = locale_table[key]
+    if value == nil then
+      value = tostring(key)
+    end
+    rawset(tab, key, value)
+    return value
+  end
+})
+
+-- _G["AutoLogin_L"] = L
 
 local has_nampower = EncryptPassword and EncryptedServerLogin
 local has_superwow = (ImportFile and ExportFile) or (SUPERWOW_VERSION and tonumber(SUPERWOW_VERSION) >= 1.4)
@@ -72,7 +108,7 @@ end
 
 if not has_nampower and not has_superwow then
   GlueDialogTypes["AL_NO_DEPS"] = {
-    text = L["NoDeps"],
+    text = L["|cff77ff00Turtle AutoLogin|r requires Nampower 3.2.0+ or SuperWoW 1.4+ to operate."],
     button1 = TEXT(OKAY),
     showAlert = 1,
   }
@@ -82,7 +118,7 @@ if not has_nampower and not has_superwow then
 end
 
 GlueDialogTypes["AL_CANT_DECRYPT"] = {
-  text = "This account's password is encrypted but decryption is not available.\nPlease re-enter your password to save it again.",
+  text = L["This account's password is encrypted but decryption is not available.\nPlease re-enter your password to save it again."],
   button1 = TEXT(OKAY),
   showAlert = 1,
 }
@@ -297,7 +333,7 @@ function LoginManager:MakeExtraAccountButtons()
     encryptButton:SetHeight(35)
     encryptButton:SetPoint("RIGHT", quitButton, "LEFT", 4, 0)
 
-    encryptButton:SetText(L["EncryptMode"])
+    encryptButton:SetText(L["Encrypt"])
     encryptButton:SetWidth(encryptButton:GetFontString():GetStringWidth() + 50)
 
     encryptButton:SetScript("OnClick", function()
@@ -312,7 +348,7 @@ function LoginManager:MakeExtraAccountButtons()
         GlueTooltip_SetOwner(nil, encryptButton, 0, 0)
         GlueTooltip:ClearAllPoints()
         GlueTooltip:SetPoint("BOTTOM", encryptButton, "TOP", 0, 4)
-        GlueTooltip_SetText("Set environment variable\n|cffffd100WOW_ENCRYPTION_KEY|r to enable.", nil, 1, 1, 1)
+        GlueTooltip_SetText(L["Set environment variable"] .. "\n|cffffd100WOW_ENCRYPTION_KEY|r " .. L["to enable."], nil, 1, 1, 1)
       end)
       encryptButton:SetScript("OnLeave", function()
         GlueTooltip:Hide()
@@ -327,7 +363,7 @@ function LoginManager:MakeExtraAccountButtons()
     lockButton:SetHeight(35)
     lockButton:SetPoint("RIGHT", (quitButton.encrypt or quitButton), "LEFT", 4, 0)
 
-    lockButton:SetText(L["LockAccounts"])
+    lockButton:SetText(L["Lock"])
     lockButton:SetWidth(lockButton:GetFontString():GetStringWidth() + 50)
 
     lockButton:SetScript("OnClick", function()
@@ -346,7 +382,7 @@ function LoginManager:MakeExtraAccountButtons()
     streamerButton:SetHeight(35)
     streamerButton:SetPoint("RIGHT", quitButton.lock, "LEFT", 4, 0)
 
-    streamerButton:SetText(L["StreamerMode"])
+    streamerButton:SetText(L["Streamer"])
     streamerButton:SetWidth(streamerButton:GetFontString():GetStringWidth() + 50)
 
     streamerButton:SetScript("OnClick", function()
@@ -495,8 +531,8 @@ function LoginManager:UpdateLoginUI()
   local pageIndices = {}
   local skip = self.CurrentPage * self.PageSize;
 
-  AutologinSelectAccountText:SetText(L["SelectAccount"])
-  AutologinRemoveAccountButton:SetText(L["RemoveAccount"])
+  AutologinSelectAccountText:SetText(L["Select account"])
+  AutologinRemoveAccountButton:SetText(L["Remove account"])
 
   local streamer = self.State.account_buttons_streamer
   if AccountLoginAccountEdit.cover then
@@ -782,7 +818,7 @@ function LoginManager:OnCharactersLoad()
     lockButton:SetHeight(35)
     lockButton:SetPoint("LEFT", addonsButton, "RIGHT", 4, 0)
 
-    lockButton:SetText(L["LockCharacters"])
+    lockButton:SetText(L["Lock Characters"])
     lockButton:SetWidth(lockButton:GetFontString():GetStringWidth() + 50)
 
     lockButton:SetScript("OnClick", function()
@@ -1016,4 +1052,5 @@ CharacterSelect_EnterWorld = function (a1,a2,a3,a4,a5,a6,a7,a8,a9)
   LoginManager:EnterWorld()
 end
 --------
+
 
